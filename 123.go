@@ -7,13 +7,11 @@ import (
 	"net/http"
 )
 
-// ErrorResponse struct for the error response format
 type ErrorResponse struct {
 	Status  int    `json:"status"`
 	Message string `json:"message"`
 }
 
-// Struct to unmarshal incoming JSON data
 type RequestData struct {
 	Message string `json:"message"`
 }
@@ -30,7 +28,6 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Decode JSON data from the request body
 	var requestData RequestData
 	err := json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
@@ -38,7 +35,6 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the "message" field is empty or absent
 	if requestData.Message == "" {
 		errorResponse := ErrorResponse{
 			Status:  http.StatusBadRequest,
@@ -52,7 +48,6 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Received message: %s\n", requestData.Message)
 
-	// Send a response indicating success
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintln(w, "Data received successfully")
 }
