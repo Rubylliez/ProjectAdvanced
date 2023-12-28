@@ -3,58 +3,56 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"net/http"
 )
 
-type JSONData struct {
+// ErrorResponse struct for the error response format
+type ErrorResponse struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+}
+
+// Struct to unmarshal incoming JSON data
+type RequestData struct {
 	Message string `json:"message"`
 }
 
 func main() {
-	http.HandleFunc("/", handleJSONRequest)
-	fmt.Println("Server is running on port 8080...")
-	http.ListenAndServe(":8080", nil)
+	http.HandleFunc("/handlepost", handlePost)
+	fmt.Println("Server listening on port 8080...")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func handleJSONRequest(w http.ResponseWriter, r *http.Request) {
+func handlePost(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	// Decode JSON data from the request body
+	var requestData RequestData
+	err := json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		http.Error(w, "Error decoding JSON", http.StatusBadRequest)
 		return
 	}
 
-	var jsonData JSONData
-	err = json.Unmarshal(body, &jsonData)
-	if err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
-		return
-	}
-
-	if jsonData.Message != "" {
-		fmt.Println("Received message:", jsonData.Message)
-
-		response := map[string]string{
-			"status":  "success",
-			"message": "Data successfully received",
+	// Check if the "message" field is empty or absent
+	if requestData.Message == "" {
+		errorResponse := ErrorResponse{
+			Status:  http.StatusBadRequest,
+			Message: "Invalid JSON message",
 		}
-
-		responseJSON, err := json.Marshal(response)
-		if err != nil {
-			http.Error(w, "Error creating JSON response", http.StatusInternalServerError)
-			return
-		}
-
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(responseJSON)
-	} else {
-		http.Error(w, "Invalid JSON message", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(errorResponse)
 		return
 	}
+
+	fmt.Printf("Received message: %s\n", requestData.Message)
+
+	// Send a response indicating success
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "Data received successfully")
 }
